@@ -27,6 +27,9 @@ INCLUDEPATH += $$PWD
 
 HEADERS += \
     Export.h \
+    Json.h \
+    PluginManifest.h \
+    PluginRegistry.h \
     Value.h \
     Blob.h \
     BlobFrame.h \
@@ -41,6 +44,9 @@ HEADERS += \
 
 SOURCES += \
     Blob.cpp \
+    Json.cpp \
+    PluginManifest.cpp \
+    PluginRegistry.cpp \
     BlobFrame.cpp \
     BlobChannel.cpp \
     EventBus.cpp \

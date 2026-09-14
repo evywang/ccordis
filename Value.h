@@ -65,6 +65,11 @@ public:
     Value at(const std::string &key) const;
     bool has(const std::string &key) const;
 
+    /** Object member set: replace in place (order-stable) or append.
+     *  Null receiver is promoted to an empty object; other non-object
+     *  receivers ignore the call (config payloads stay well-typed). */
+    void set(const std::string &key, Value v);
+
     static Value object(std::initializer_list<Object::value_type> items);
     static Value array(std::initializer_list<Value> items);
 
@@ -144,6 +149,32 @@ inline bool Value::has(const std::string &key) const
         }
     }
     return false;
+}
+
+inline void Value::set(const std::string &key, Value v)
+{
+    if (std::holds_alternative<std::monostate>(m_v))
+        m_v = Object();
+    if (Object *o = std::get_if<Object>(&m_v)) {
+        for (auto &kv : *o) {
+            if (kv.first == key) {
+                kv.second = std::move(v);
+                return;
+            }
+        }
+        o->emplace_back(key, std::move(v));
+    }
+}
+
+/** Shallow config merge: `base` (object) copied, then every member of
+ *  `overrides` set into it (override keys win, insertion order kept). */
+inline Value shallowMerged(const Value &base, const Value &overrides)
+{
+    Value out = base.isNull() ? Value(Value::Object()) : base;
+    if (const Value::Object *o = overrides.asObject())
+        for (const auto &kv : *o)
+            out.set(kv.first, kv.second);
+    return out;
 }
 
 inline Value Value::object(std::initializer_list<Object::value_type> items)

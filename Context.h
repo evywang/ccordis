@@ -116,6 +116,18 @@ public:
      */
     std::string pluginVersion(const std::string &name) const;
 
+    /** Plugin's code-declared service requirements (PluginDef.reqs /
+     *  PluginMeta.required). Empty when the plugin is not loaded here. */
+    std::vector<std::string> pluginRequires(const std::string &name) const;
+
+    /** Name/version of the most recently ADDED record in this scope (host
+     *  thread; valid immediately after a successful plugin, pluginFromLibrary
+     *  or loadRegistered call). Empty when nothing was loaded yet.
+     *  Introspection convenience for loadAppConfig summaries — do not build
+     *  logic on it. */
+    std::string lastLoadedName() const { return m_lastLoadedName; }
+    std::string lastLoadedVersion() const { return m_lastLoadedVersion; }
+
     // ── config-driven bootstrap ────────────────────────────────────────────
 
     /** Register an in-process factory addressable by name. */
@@ -132,6 +144,25 @@ public:
      * Unknown names are logged and skipped, never fatal.
      */
     void loadConfig(const Value &doc);
+
+    /**
+     * @brief Application document loader (P1 §6.2; app.json shape):
+     *   { "plugins": [ {"plugin": "factory.name" | "lib:path/to/lib.so",
+     *                   "options": {...},
+     *                   "if": "file:P" | "env:V" | "platform:os"} ] }
+     *
+     * Bare names resolve through the registry's scanned manifests first
+     * (dynamic .so; entry "options" shallow-merge over manifest defaults),
+     * then fall back to registered factories (class-form builtins).
+     * Failed/conditional-skipped entries are logged AND collected — a
+     * spelling error must never be silently dropped (契约 M8).
+     *
+     * @param registry optional PluginRegistry for manifest resolution
+     * @return summary document:
+     *   {"loaded":[{name,version}...], "skipped":[{name,reason}...]}
+     *   (host emits evt.app.ready from it — 契约 §2.6)
+     */
+    Value loadAppConfig(const Value &appConfig, class PluginRegistry *registry = nullptr);
 
     // ── services (cordis provide/inject) ───────────────────────────────────
 
@@ -263,6 +294,9 @@ private:
     std::shared_ptr<BlobPool> m_blobPool;                  // root-owned
     std::shared_ptr<std::map<std::string, std::shared_ptr<BlobChannel>>>
         m_channels;                                        // root-owned
+
+    std::string m_lastLoadedName;      // introspection: most recent addRecord
+    std::string m_lastLoadedVersion;
 
     LoadRecord *m_startingRecord = nullptr;      // during ensureStarted only
 };

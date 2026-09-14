@@ -1,8 +1,11 @@
 #include "Context.h"
 #include "Log.h"
+#include "PluginRegistry.h"
 #include "SharedLibrary.h"
 
 #include <algorithm>
+#include <cstdlib>
+#include <filesystem>
 
 namespace ccordis {
 
@@ -16,6 +19,44 @@ std::string stateToString(Context::State s)
     case Context::State::Disposed:  return "disposed";
     }
     return "unknown";
+}
+
+// app.json "if" 条件评估（P7 §2.2 裁决口径：仅存在性条件，服务依赖一律走
+// requires + Deferred）。kind ∈ {file:, env:, platform:}；未知 kind → false。
+const char *currentPlatformName()
+{
+#if defined(_WIN32)
+    return "windows";
+#elif defined(__APPLE__)
+    return "macos";
+#else
+    return "linux";
+#endif
+}
+
+bool evalIfCondition(const std::string &cond, std::string *why)
+{
+    if (cond.rfind("file:", 0) == 0) {
+        std::error_code ec;
+        if (std::filesystem::exists(cond.substr(5), ec))
+            return true;
+        if (why) *why = "file not found";
+        return false;
+    }
+    if (cond.rfind("env:", 0) == 0) {
+        if (std::getenv(cond.substr(4).c_str()) != nullptr)
+            return true;
+        if (why) *why = "environment variable not set";
+        return false;
+    }
+    if (cond.rfind("platform:", 0) == 0) {
+        if (cond.substr(9) == currentPlatformName())
+            return true;
+        if (why) *why = std::string("running on ") + currentPlatformName();
+        return false;
+    }
+    if (why) *why = "unknown condition kind (file:/env:/platform:)";
+    return false;
 }
 } // namespace
 
@@ -86,6 +127,8 @@ Context::~Context()
 void Context::addRecord(LoadRecord *rec)
 {
     m_records.push_back(std::unique_ptr<LoadRecord>(rec)); // stable address
+    m_lastLoadedName = rec->meta.name;
+    m_lastLoadedVersion = rec->meta.version;
     armDependencyWatchers(*rec);
     // Load-time lifecycle log: registered into this scope. Activation (which
     // may happen now or much later via the Deferred machinery) logs separately
@@ -234,6 +277,15 @@ std::string Context::pluginVersion(const std::string &name) const
     return "0.0.0";   // unknown == not loaded in this scope / not declared
 }
 
+std::vector<std::string> Context::pluginRequires(const std::string &name) const
+{
+    for (const auto &rec : m_records) {
+        if (rec->meta.name == name)
+            return rec->meta.required;
+    }
+    return {};
+}
+
 // ── config-driven bootstrap ─────────────────────────────────────────────────
 
 void Context::registerFactory(const std::string &name, const PluginMeta &meta,
@@ -276,6 +328,75 @@ void Context::loadConfig(const Value &doc)
         else
             loadRegistered(name, options);
     }
+}
+
+Value Context::loadAppConfig(const Value &doc, PluginRegistry *registry)
+{
+    Value::Array loaded;
+    Value::Array skipped;
+    auto addSkipped = [&skipped](const std::string &name, const std::string &reason) {
+        skipped.push_back(Value::object({{"name", Value(name)},
+                                         {"reason", Value(reason)}}));
+        log("loadAppConfig: skip '%s': %s", name.c_str(), reason.c_str());
+    };
+
+    Value holder;
+    const Value::Array *entries = nullptr;
+    if (const Value::Array *arr = doc.asArray()) {
+        entries = arr;                          // bare array form
+    } else {
+        holder = doc.at("plugins");
+        entries = holder.asArray();             // { "plugins": [...] } form
+    }
+    if (!entries) {
+        log("loadAppConfig: document has no 'plugins' array — nothing to load");
+        return Value::object({{"loaded", Value(std::move(loaded))},
+                              {"skipped", Value(std::move(skipped))}});
+    }
+
+    for (const Value &entry : *entries) {
+        const std::string name = entry.at("plugin").toString();
+        if (name.empty()) {
+            addSkipped("", "empty plugin name");
+            continue;
+        }
+        // "if" 存在性条件（file:/env:/platform:）—— 不满足则本次跳过并留痕
+        const std::string cond = entry.at("if").toString();
+        if (!cond.empty()) {
+            std::string why;
+            if (!evalIfCondition(cond, &why)) {
+                addSkipped(name, "condition '" + cond + "' unmet: " + why);
+                continue;
+            }
+        }
+        const Value options = entry.at("options");
+
+        // lib: 前缀 → 直接按路径加载（名称以 .so 内嵌 def 为准）
+        if (name.rfind("lib:", 0) == 0) {
+            if (!pluginFromLibrary(name.substr(4), options)) {
+                addSkipped(name, "library failed to load");
+                continue;
+            }
+            loaded.push_back(Value::object(
+                {{"name", Value(lastLoadedName())},
+                 {"version", Value(lastLoadedVersion())}}));
+            continue;
+        }
+
+        // 裸名：registry manifest（动态 .so）优先，否则工厂回退。
+        // 两者皆无 → ERROR 级留痕（拼写错误绝不静默，契约 M8）。
+        const bool ok = registry ? registry->load(*this, name, options)
+                                 : loadRegistered(name, options);
+        if (!ok) {
+            addSkipped(name, registry ? registry->lastError()
+                                      : "no registered factory named '" + name + "'");
+            continue;
+        }
+        loaded.push_back(Value::object({{"name", Value(name)},
+                                        {"version", Value(pluginVersion(name))}}));
+    }
+    return Value::object({{"loaded", Value(std::move(loaded))},
+                          {"skipped", Value(std::move(skipped))}});
 }
 
 // ── events / middleware / data plane ────────────────────────────────────────
