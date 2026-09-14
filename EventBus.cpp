@@ -16,6 +16,21 @@ EventBus::ScopedConnection EventBus::on(const std::string &event,
 
 void EventBus::emitEvent(const std::string &event, const Payload &payload)
 {
+    // Storm guard (G4): deeper than kMaxRecurse nested emits = a handler
+    // cycle. Drop the event and log; unwinding normally would still blow
+    // the stack for deep-enough cycles, and silence would hide the bug.
+    if (m_depth >= kMaxRecurse) {
+        log("event '%s' dropped: re-emit depth %u exceeds cap %u "
+            "(handler re-entry cycle?)",
+            event.c_str(), m_depth + 1u, kMaxRecurse);
+        return;
+    }
+    ++m_depth;
+    struct DepthGuard {
+        unsigned &d;
+        ~DepthGuard() { --d; }
+    } guard{m_depth};
+
     // Snapshot under the lock, dispatch outside it: handlers may emit
     // re-entrantly or unsubscribe (release grabs the same mutex).
     std::vector<Handler> snapshot;

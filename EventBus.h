@@ -26,6 +26,11 @@ namespace ccordis {
  *    the rest of the fan-out or unwinds through teardown (review A3/F3).
  *  - Re-entrancy: emitEvent snapshots the handler table; handlers may
  *    subscribe/unsubscribe/re-emit during dispatch.
+ *  - Storm guard (gap G4): emit depth is capped (kMaxRecurse, default 16).
+ *    A handler chain that re-emits beyond the cap is dropped with a log —
+ *    a naive A→handler→emit e2→handler→emit e1 cycle would otherwise
+ *    recurse until the host thread stack overflows (exception isolation
+ *    cannot help: nothing throws).
  *
  * Threading: host thread only (single-thread contract, design §12);
  * the mutex exists solely for snapshot consistency and teardown re-entrancy.
@@ -105,6 +110,8 @@ private:
     std::mutex m_mutex;                          // guards m_handlers
     std::map<std::string, std::vector<Entry>> m_handlers; // append = FIFO
     Token m_nextToken = 1;
+    unsigned m_depth = 0;                        // re-entrancy depth (G4)
+    static constexpr unsigned kMaxRecurse = 16;
 };
 
 } // namespace ccordis

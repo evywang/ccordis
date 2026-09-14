@@ -4,6 +4,7 @@
 #include "Export.h"
 #include "Value.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -64,9 +65,13 @@ struct PluginDef
     const char *name;                 // PluginMeta::name (UTF-8, static)
     const char *label;                // PluginMeta::label, may be nullptr
     const char *const *reqs;          // null-terminated array, may be nullptr
+    std::uint32_t abiVersion;         // must equal CCORDIS_ABI_VERSION (G1)
     IPlugin *(*create)();             // factory
     void (*destroy)(IPlugin *);       // matching deleter (never null)
 };
+
+/** Kernel release string (ccordis::version()). */
+inline const char *version() { return CCORDIS_VERSION; }
 
 /** Decode a PluginDef's static char* metadata into PluginMeta. */
 inline PluginMeta metaFromDef(const PluginDef *def)
@@ -92,7 +97,8 @@ inline PluginMeta metaFromDef(const PluginDef *def)
     extern "C" CCORDIS_EXPORT const ccordis::PluginDef *ccordis_plugin_entry() {    \
         static const char *ccordis_req[] REQ_EXPR; /* {"a","b"} or {nullptr} */   \
         static const ccordis::PluginDef ccordis_def = {                            \
-            NAME, nullptr, ccordis_req, &ccordis_create_impl, &ccordis_destroy_impl \
+            NAME, nullptr, ccordis_req, CCORDIS_ABI_VERSION,                      \
+            &ccordis_create_impl, &ccordis_destroy_impl                           \
         };                                                                       \
         return &ccordis_def;                                                      \
     }

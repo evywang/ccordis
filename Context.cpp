@@ -135,6 +135,12 @@ bool Context::pluginFromLibrary(const std::string &path, const Value &config)
         return false;   // lib dtor unloads an unresolved candidate
     }
     PluginDef *def = const_cast<PluginDef *>(entry());
+    if (def->abiVersion != CCORDIS_ABI_VERSION) {                  // G1 握手
+        log("plugin library '%s' abiVersion=%u does not match kernel %u "
+            "(rebuild the plugin against current ccordis headers)",
+            path.c_str(), unsigned(def->abiVersion), unsigned(CCORDIS_ABI_VERSION));
+        return false;
+    }
 
     LoadRecord *rec = new LoadRecord;
     rec->meta = metaFromDef(def);
@@ -154,6 +160,12 @@ bool Context::pluginFromDef(const PluginDef *def, const Value &config)
 {
     if (!def || !def->create || !def->destroy)
         return false;
+    if (def->abiVersion != CCORDIS_ABI_VERSION) {                  // G1 握手
+        log("adopted plugin '%s' abiVersion=%u does not match kernel %u",
+            def->name ? def->name : "?", unsigned(def->abiVersion),
+            unsigned(CCORDIS_ABI_VERSION));
+        return false;
+    }
     PluginDef *d = const_cast<PluginDef *>(def);
 
     LoadRecord *rec = new LoadRecord;

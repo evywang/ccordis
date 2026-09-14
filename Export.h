@@ -13,6 +13,20 @@
  *                    implementations without the name-string fallback).
  */
 
+/**
+ * Kernel version + plugin ABI contract version (gap G1):
+ *  - CCORDIS_VERSION      — kernel release string, surfaced via ccordis::version().
+ *  - CCORDIS_ABI_VERSION  — bumped whenever kernel header layout/inline
+ *    ABI changes (members added/removed, inline template bodies that embed
+ *    into plugins). Hosts compare it against PluginDef::abiVersion at load
+ *    and REJECT stale libraries with a clear log instead of crashing later
+ *    (see §7.2 lesson: stale .so silently miswrote member slots).
+ * Plugins must embed it via CORDIS_PLUGIN_DEF* macros — never hand-write
+ * the descriptor.
+ */
+#define CCORDIS_VERSION "2.1.0"
+#define CCORDIS_ABI_VERSION 1
+
 #if defined(_WIN32)
 #  if defined(CCORDIS_PLUGIN_BUILD)
 #    define CCORDIS_EXPORT __declspec(dllexport)
