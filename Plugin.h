@@ -91,24 +91,28 @@ inline PluginMeta metaFromDef(const PluginDef *def)
 } // namespace ccordis
 
 /** Shared expansion core; do not use directly. */
-#define CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, REQ_EXPR)                           \
+#define CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, REQ_ARRAY)                           \
     static ccordis::IPlugin *ccordis_create_impl() { return new (CLASS)(); }       \
     static void ccordis_destroy_impl(ccordis::IPlugin *p) { delete p; }            \
     extern "C" CCORDIS_EXPORT const ccordis::PluginDef *ccordis_plugin_entry() {    \
-        static const char *ccordis_req[] REQ_EXPR; /* {"a","b"} or {nullptr} */   \
         static const ccordis::PluginDef ccordis_def = {                            \
-            NAME, nullptr, ccordis_req, CCORDIS_ABI_VERSION,                      \
-            &ccordis_create_impl, &ccordis_destroy_impl                           \
+            NAME, nullptr, REQ_ARRAY, CCORDIS_ABI_VERSION,                         \
+            &ccordis_create_impl, &ccordis_destroy_impl                            \
         };                                                                       \
         return &ccordis_def;                                                      \
     }
 
 /** Declare a dynamic plugin with no service requirements. */
-#define CCORDIS_PLUGIN_DEF(CLASS, NAME) \
-    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, = { nullptr })
+#define CCORDIS_PLUGIN_DEF(CLASS, NAME)                                            \
+    static const char *ccordis_req_##CLASS[] = { nullptr };                        \
+    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, ccordis_req_##CLASS)
 
-/** Declare a dynamic plugin requiring the listed service ids. */
-#define CCORDIS_PLUGIN_DEF_REQ(CLASS, NAME, ...) \
-    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, = { __VA_ARGS__, nullptr })
+/**
+ * Declare a dynamic plugin requiring the listed service ids.
+ * Usage: CCORDIS_PLUGIN_DEF_REQ(MyPlugin, "demo.x", "demo.dep1", "demo.dep2")
+ */
+#define CCORDIS_PLUGIN_DEF_REQ(CLASS, NAME, ...)                                   \
+    static const char *ccordis_req_##CLASS[] = { __VA_ARGS__, nullptr };           \
+    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, ccordis_req_##CLASS)
 
 #endif // CCORDIS_PLUGIN_H
