@@ -60,12 +60,15 @@ public:
      * Class form — cordis `class { constructor(ctx, options) }`:
      * T(Context&, const Value&) IS the plugin body; the instance is bound
      * to the load record and destroyed at (every) teardown.
+     * `version` is the plugin's semantic version (audit/display only, "0.0.0"
+     * when omitted) — surfaced via pluginVersion() and the load/activate logs.
      */
     template <typename T>
     void plugin(const std::string &name, const Value &config = Value(),
-                const std::vector<std::string> &required = {})
+                const std::vector<std::string> &required = {},
+                const std::string &version = "0.0.0")
     {
-        registerFactory(name, PluginMeta{name, name, required, {}},
+        registerFactory(name, PluginMeta{name, name, required, {}, version},
                         [this](Context &scope, const Value &cfg) {
                             pushClassOwned<T>(currentRecord(), scope, cfg);
                         });
@@ -104,6 +107,14 @@ public:
 
     /** Last activation error (review F6); empty when none recorded. */
     std::string pluginError(const std::string &name) const;
+
+    /**
+     * @brief Plugin semantic version ("major.minor.patch"). "0.0.0" when the
+     *        plugin is not loaded (in this scope), was admin-unloaded, or did
+     *        not declare one. Audit/display only — load decisions are made
+     *        exclusively by the abiVersion equality check (G1).
+     */
+    std::string pluginVersion(const std::string &name) const;
 
     // ── config-driven bootstrap ────────────────────────────────────────────
 

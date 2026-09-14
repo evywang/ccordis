@@ -17,4 +17,4 @@ class HelloPlugin : public ccordis::IPlugin {
     }
 };
 }
-CCORDIS_PLUGIN_DEF(HelloPlugin, "demo.hello")
+CCORDIS_PLUGIN_DEF_V(HelloPlugin, "demo.hello", "1.0.0")

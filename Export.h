@@ -23,9 +23,14 @@
  *    (see §7.2 lesson: stale .so silently miswrote member slots).
  * Plugins must embed it via CORDIS_PLUGIN_DEF* macros — never hand-write
  * the descriptor.
+ *
+ * abi 2 (kernel 2.2.0): PluginDef gained a trailing `version` field
+ * (plugin semantic version, P1 §4.5). The bump is mandatory — an abi-1
+ * .so embeds a smaller static PluginDef, and the host must reject it via
+ * the equality check BEFORE ever touching def->version (else OOB read).
  */
-#define CCORDIS_VERSION "2.1.0"
-#define CCORDIS_ABI_VERSION 1
+#define CCORDIS_VERSION "2.2.0"
+#define CCORDIS_ABI_VERSION 2
 
 #if defined(_WIN32)
 #  if defined(CCORDIS_PLUGIN_BUILD)

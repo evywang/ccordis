@@ -51,6 +51,7 @@ struct PluginMeta
     std::string label;                  // human-readable (visualization)
     std::vector<std::string> required;  // service ids that must be available
     std::vector<std::string> provides;  // intended services (documentation)
+    std::string version = "0.0.0";      // semantic version (audit/display only)
 };
 
 /**
@@ -68,6 +69,9 @@ struct PluginDef
     std::uint32_t abiVersion;         // must equal CCORDIS_ABI_VERSION (G1)
     IPlugin *(*create)();             // factory
     void (*destroy)(IPlugin *);       // matching deleter (never null)
+    const char *version = nullptr;    // "major.minor.patch"; nullptr = "0.0.0".
+                                      // Trailing (abi 2): audit/display only —
+                                      // load decisions stay with abiVersion.
 };
 
 /** Kernel release string (ccordis::version()). */
@@ -81,6 +85,7 @@ inline PluginMeta metaFromDef(const PluginDef *def)
         return meta;
     meta.name = def->name ? def->name : "";
     meta.label = def->label ? def->label : "";
+    meta.version = def->version ? def->version : "0.0.0";
     if (def->reqs) {
         for (const char *const *r = def->reqs; *r; ++r)
             meta.required.emplace_back(*r);
@@ -90,29 +95,41 @@ inline PluginMeta metaFromDef(const PluginDef *def)
 
 } // namespace ccordis
 
-/** Shared expansion core; do not use directly. */
-#define CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, REQ_ARRAY)                           \
+/** Shared expansion core; do not use directly. VER is the semantic version
+ *  string embedded in the descriptor (nullptr-able via "0.0.0" default). */
+#define CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, VER, REQ_ARRAY)                       \
     static ccordis::IPlugin *ccordis_create_impl() { return new (CLASS)(); }       \
     static void ccordis_destroy_impl(ccordis::IPlugin *p) { delete p; }            \
     extern "C" CCORDIS_EXPORT const ccordis::PluginDef *ccordis_plugin_entry() {    \
         static const ccordis::PluginDef ccordis_def = {                            \
             NAME, nullptr, REQ_ARRAY, CCORDIS_ABI_VERSION,                         \
-            &ccordis_create_impl, &ccordis_destroy_impl                            \
+            &ccordis_create_impl, &ccordis_destroy_impl, VER                       \
         };                                                                       \
         return &ccordis_def;                                                      \
     }
 
-/** Declare a dynamic plugin with no service requirements. */
+/** Declare a dynamic plugin with no service requirements (version "0.0.0"). */
 #define CCORDIS_PLUGIN_DEF(CLASS, NAME)                                            \
     static const char *ccordis_req_##CLASS[] = { nullptr };                        \
-    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, ccordis_req_##CLASS)
+    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, "0.0.0", ccordis_req_##CLASS)
 
 /**
- * Declare a dynamic plugin requiring the listed service ids.
+ * Declare a dynamic plugin requiring the listed service ids (version "0.0.0").
  * Usage: CCORDIS_PLUGIN_DEF_REQ(MyPlugin, "demo.x", "demo.dep1", "demo.dep2")
  */
 #define CCORDIS_PLUGIN_DEF_REQ(CLASS, NAME, ...)                                   \
     static const char *ccordis_req_##CLASS[] = { __VA_ARGS__, nullptr };           \
-    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, ccordis_req_##CLASS)
+    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, "0.0.0", ccordis_req_##CLASS)
+
+/** Versioned variant: CCORDIS_PLUGIN_DEF_V(MyPlugin, "demo.x", "1.4.2") */
+#define CCORDIS_PLUGIN_DEF_V(CLASS, NAME, VER)                                     \
+    static const char *ccordis_req_##CLASS[] = { nullptr };                        \
+    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, VER, ccordis_req_##CLASS)
+
+/** Versioned + requires:
+ *  CCORDIS_PLUGIN_DEF_REQ_V(MyPlugin, "demo.x", "1.4.2", "demo.dep1") */
+#define CCORDIS_PLUGIN_DEF_REQ_V(CLASS, NAME, VER, ...)                            \
+    static const char *ccordis_req_##CLASS[] = { __VA_ARGS__, nullptr };           \
+    CCORDIS_PLUGIN_DEF_IMPL(CLASS, NAME, VER, ccordis_req_##CLASS)
 
 #endif // CCORDIS_PLUGIN_H

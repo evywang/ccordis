@@ -17,7 +17,8 @@ TARGET   = ccordis
 CONFIG  += c++17 shared plugin
 QT       =                                  # 零 Qt 依赖
 QMAKE_CXXFLAGS += -fvisibility=hidden       # 仅导出 C 接口/显式标记的符号
-QMAKE_LFLAGS   += -Wl,-soname,libccordis.so.1
+# soname 跟随 ABI: abi 2 (PluginDef::version 追加) → libccordis.so.2
+QMAKE_LFLAGS   += -Wl,-soname,libccordis.so.2
 
 # 导出宏: 构建 SO 时符号导出, 使用时导入
 DEFINES += CCORDIS_BUILD

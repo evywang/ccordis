@@ -87,7 +87,16 @@ void Context::addRecord(LoadRecord *rec)
 {
     m_records.push_back(std::unique_ptr<LoadRecord>(rec)); // stable address
     armDependencyWatchers(*rec);
+    // Load-time lifecycle log: registered into this scope. Activation (which
+    // may happen now or much later via the Deferred machinery) logs separately
+    // in ensureStarted — the two are distinct events by design (§4.5.4).
+    log("plugin loaded: '%s' v%s (kernel %s, abi %u)",
+        rec->meta.name.c_str(), rec->meta.version.c_str(),
+        CCORDIS_VERSION, unsigned(CCORDIS_ABI_VERSION));
     ensureStarted(*rec);
+    if (rec->state == State::Deferred)
+        log("plugin deferred: '%s' v%s (requirements not yet met)",
+            rec->meta.name.c_str(), rec->meta.version.c_str());
 }
 
 void Context::plugin(const std::string &name, const PluginMeta &meta,
@@ -214,6 +223,15 @@ std::string Context::pluginError(const std::string &name) const
             return rec->lastError;
     }
     return std::string();
+}
+
+std::string Context::pluginVersion(const std::string &name) const
+{
+    for (const auto &rec : m_records) {
+        if (rec->meta.name == name)
+            return rec->meta.version;
+    }
+    return "0.0.0";   // unknown == not loaded in this scope / not declared
 }
 
 // ── config-driven bootstrap ─────────────────────────────────────────────────
@@ -348,6 +366,7 @@ Value Context::topology() const
         node.push_back({"name", Value(rec->meta.name)});
         if (!rec->meta.label.empty())
             node.push_back({"label", Value(rec->meta.label)});
+        node.push_back({"version", Value(rec->meta.version)});
         node.push_back({"state", Value(stateToString(rec->state))});
         Value::Array req;
         for (const std::string &r : rec->meta.required)
@@ -438,6 +457,13 @@ void Context::ensureStarted(LoadRecord &rec)
         stopRecord(rec, State::Failed);
     }
     m_startingRecord = nullptr;
+    // Activation log: fires on EVERY start — including dependency-restart
+    // re-entries via the Deferred machinery — because each is a real
+    // lifecycle event an operator wants in the log (§4.5.4).
+    if (rec.state == State::Active)
+        log("plugin activated: '%s' v%s (kernel %s, abi %u)",
+            rec.meta.name.c_str(), rec.meta.version.c_str(),
+            CCORDIS_VERSION, unsigned(CCORDIS_ABI_VERSION));
 }
 
 void Context::stopRecord(LoadRecord &rec, State target)
