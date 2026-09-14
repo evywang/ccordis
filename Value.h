@@ -51,6 +51,9 @@ public:
     std::int64_t toInt(std::int64_t dflt = 0) const;
     double toDouble(double dflt = 0.0) const;     // int values widen
     std::string toString() const;                 // "" when not a string
+    /** String access with fallback: null/mismatched values yield `dflt`
+     *  (idiomatic `cfg.at("host").toString("127.0.0.1")`). */
+    std::string toString(const std::string &dflt) const;
 
     const Array *asArray() const;
     const Object *asObject() const;
@@ -94,6 +97,12 @@ inline std::string Value::toString() const
 {
     const std::string *p = std::get_if<std::string>(&m_v);
     return p ? *p : std::string();
+}
+
+inline std::string Value::toString(const std::string &dflt) const
+{
+    const std::string *p = std::get_if<std::string>(&m_v);
+    return p ? *p : dflt;
 }
 
 inline const Value::Array *Value::asArray() const
