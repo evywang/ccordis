@@ -1,8 +1,8 @@
 #ifndef CCORDIS_PLUGINMANIFEST_H
 #define CCORDIS_PLUGINMANIFEST_H
 
-#include "Export.h"
-#include "Value.h"
+#include <ccordis/Export.h>
+#include <ccordis/Value.h>
 
 #include <cstdint>
 #include <string>

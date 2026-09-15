@@ -1,5 +1,5 @@
-#include "ServiceRegistry.h"
-#include "Log.h"
+#include <ccordis/ServiceRegistry.h>
+#include <ccordis/Log.h>
 
 namespace ccordis {
 

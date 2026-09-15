@@ -1,7 +1,7 @@
 #ifndef CCORDIS_JSON_H
 #define CCORDIS_JSON_H
 
-#include "Value.h"
+#include <ccordis/Value.h>
 
 #include <string>
 

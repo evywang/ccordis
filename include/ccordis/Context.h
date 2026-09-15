@@ -1,12 +1,12 @@
 #ifndef CCORDIS_CONTEXT_H
 #define CCORDIS_CONTEXT_H
 
-#include "Blob.h"
-#include "BlobChannel.h"
-#include "EventBus.h"
-#include "Plugin.h"
-#include "ServiceRegistry.h"
-#include "Value.h"
+#include <ccordis/Blob.h>
+#include <ccordis/BlobChannel.h>
+#include <ccordis/EventBus.h>
+#include <ccordis/Plugin.h>
+#include <ccordis/ServiceRegistry.h>
+#include <ccordis/Value.h>
 
 #include <functional>
 #include <map>

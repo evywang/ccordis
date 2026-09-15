@@ -1,7 +1,7 @@
-#include "Context.h"
-#include "Log.h"
-#include "PluginRegistry.h"
-#include "SharedLibrary.h"
+#include <ccordis/Context.h>
+#include <ccordis/Log.h>
+#include <ccordis/PluginRegistry.h>
+#include <ccordis/SharedLibrary.h>
 
 #include <algorithm>
 #include <cstdlib>

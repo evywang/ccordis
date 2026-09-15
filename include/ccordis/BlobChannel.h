@@ -1,7 +1,7 @@
 #ifndef CCORDIS_BLOBCHANNEL_H
 #define CCORDIS_BLOBCHANNEL_H
 
-#include "Blob.h"
+#include <ccordis/Blob.h>
 
 #include <atomic>
 #include <cstdint>

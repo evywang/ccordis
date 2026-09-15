@@ -1,7 +1,7 @@
 #ifndef CCORDIS_EVENTBUS_H
 #define CCORDIS_EVENTBUS_H
 
-#include "Value.h"
+#include <ccordis/Value.h>
 
 #include <cstdint>
 #include <functional>

@@ -1,8 +1,8 @@
 #ifndef CCORDIS_PLUGINREGISTRY_H
 #define CCORDIS_PLUGINREGISTRY_H
 
-#include "Context.h"
-#include "PluginManifest.h"
+#include <ccordis/Context.h>
+#include <ccordis/PluginManifest.h>
 
 #include <functional>
 #include <map>

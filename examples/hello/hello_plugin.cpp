@@ -1,8 +1,8 @@
 // plugins/hello/hello_plugin.cpp
 #include <string>
-#include "Plugin.h"
-#include "Context.h"
-#include "Log.h"
+#include <ccordis/Plugin.h>
+#include <ccordis/Context.h>
+#include <ccordis/Log.h>
 #include "iface_greet.h"   // 跨DSO共享接口(宿主与插件同头, CCORDIS_INTERFACE锚定)
 namespace {
 class HelloGreet : public IGreet {

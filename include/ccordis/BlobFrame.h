@@ -1,7 +1,7 @@
 #ifndef CCORDIS_BLOBFRAME_H
 #define CCORDIS_BLOBFRAME_H
 
-#include "Blob.h"
+#include <ccordis/Blob.h>
 
 #include <cstddef>
 #include <cstdint>

@@ -1,6 +1,6 @@
-#include "PluginRegistry.h"
-#include "Json.h"
-#include "Log.h"
+#include <ccordis/PluginRegistry.h>
+#include <ccordis/Json.h>
+#include <ccordis/Log.h>
 
 #include <algorithm>
 #include <cstring>

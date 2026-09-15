@@ -3,7 +3,7 @@
 // CCORDIS_INTERFACE 锚定唯一 typeinfo, 否则 inject 因严格校验返回 nullptr。
 #ifndef IFACE_GREET_H
 #define IFACE_GREET_H
-#include "Export.h"     // 由 INCLUDEPATH 指向 ccordis/ 目录解析
+#include <ccordis/Export.h>     // 由 INCLUDEPATH 指向 ccordis/ 目录解析
 #include <string>
 class CCORDIS_INTERFACE IGreet {
 public:

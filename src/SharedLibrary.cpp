@@ -1,4 +1,4 @@
-#include "SharedLibrary.h"
+#include <ccordis/SharedLibrary.h>
 
 #ifdef _WIN32
 #  ifndef NOMINMAX

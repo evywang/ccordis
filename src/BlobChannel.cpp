@@ -1,4 +1,4 @@
-#include "BlobChannel.h"
+#include <ccordis/BlobChannel.h>
 
 namespace ccordis {
 

@@ -1,5 +1,5 @@
-#include "PluginManifest.h"
-#include "Json.h"
+#include <ccordis/PluginManifest.h>
+#include <ccordis/Json.h>
 
 namespace ccordis {
 
